@@ -3,6 +3,7 @@
 constexpr uint8_t RED_PIN = 6;
 constexpr uint8_t YELLOW_PIN = 15;
 constexpr uint8_t GREEN_PIN = 16;
+constexpr uint8_t BUTTON_PIN = 4;
 
 struct
 { 
@@ -21,16 +22,28 @@ enum State{
   RED_YELLOW
 };
 
-constexpr uint32_t BLINK_INTERVAL = 500;
+constexpr uint32_t BLINK_INTERVAL = 500; 
 uint32_t currentStateBegin = 0;
 uint32_t lastBlinkTime = 0;
 bool blinkState = false;
 
+volatile bool isYellowBlinkingMode = false; 
+volatile uint32_t lastDebounceTime = 0;
+constexpr uint32_t DEBOUNCE_DELAY = 200; 
+
 State state = GREEN;
-State lastState = (State)-1;
 
 void IRAM_ATTR onTimer(){
 
+}
+
+void IRAM_ATTR handleButtonPress() {
+  uint32_t current_time = millis();
+  
+  if (current_time - lastDebounceTime > DEBOUNCE_DELAY) {
+    lastDebounceTime = current_time;
+    isYellowBlinkingMode = !isYellowBlinkingMode; 
+  }
 }
 
 void setup() {
@@ -39,12 +52,31 @@ void setup() {
   pinMode(RED_PIN, OUTPUT);
   pinMode(YELLOW_PIN, OUTPUT);
   pinMode(GREEN_PIN, OUTPUT);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), handleButtonPress, FALLING);
   
   currentStateBegin = millis();
 }
 
 void loop() {
   uint32_t current_time = millis();
+
+  if (isYellowBlinkingMode)
+  {
+    if (current_time - lastBlinkTime >= BLINK_INTERVAL)
+    {
+      lastBlinkTime = current_time;
+      blinkState = !blinkState;
+      digitalWrite(YELLOW_PIN, blinkState ? HIGH : LOW);
+    }
+    digitalWrite(GREEN_PIN, LOW);
+    digitalWrite(RED_PIN, LOW);
+    
+    currentStateBegin = current_time;
+    return; 
+  }
+
   State previousState = state;
 
   if (state == GREEN && (current_time - currentStateBegin > ModeDuration.GREEN))
@@ -71,6 +103,8 @@ void loop() {
   if (state != previousState)
   {
     currentStateBegin = current_time;
+    lastBlinkTime = current_time;
+    blinkState = false;
   }
 
   switch (state)
