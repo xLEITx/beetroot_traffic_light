@@ -19,11 +19,11 @@ enum class TrafficState: uint8_t {
 
 struct TIMERS_S
 {
-  uint8_t GREEN = 10;
-  uint8_t GREEN_BLINKING = 3;
-  uint8_t YELLOW = 3;
-  uint8_t RED = 10;
-  uint8_t RED_YELLOW = 2;
+  static const uint8_t GREEN = 10;
+  static const uint8_t GREEN_BLINKING = 3;
+  static const uint8_t YELLOW = 3;
+  static const uint8_t RED = 10;
+  static const uint8_t RED_YELLOW = 2;
 };
 
 constexpr uint32_t GENERAL_BLINKING_MS = 500;
@@ -42,6 +42,68 @@ void IRAM_ATTR onButton(){
 
 void IRAM_ATTR onTimer(){
   timer_counter++;
+}
+
+void stateHandler(){
+  if (isButtonPressed)
+  {
+    uint32_t currentMillis = millis();
+    if (currentMillis-lastButtonPressTime > 50)
+    {
+      lastButtonPressTime = currentMillis;
+      if (currentState == TrafficState::YELLOW_BLINKING)
+      {
+        currentState = stateBeforeInterrupt;
+        
+      }else{
+        stateBeforeInterrupt = currentState;
+        currentState = TrafficState::YELLOW_BLINKING;
+      }
+    }
+    
+    isButtonPressed = false;    
+  }
+
+  if (currentState == TrafficState::GREEN)
+  {
+    if (timer_counter - currentStateBegin >= TIMERS_S::GREEN)
+    {
+      currentState = TrafficState::GREEN_BLINKING;
+      currentStateBegin = timer_counter;
+    }
+    
+  }else if (currentState == TrafficState::GREEN_BLINKING)
+  {
+    if (timer_counter - currentStateBegin >= TIMERS_S::GREEN_BLINKING)
+    {
+      currentState = TrafficState::YELLOW;
+      currentStateBegin = timer_counter;
+    }
+  }else if (currentState == TrafficState::YELLOW)
+  {
+    if (timer_counter - currentStateBegin >= TIMERS_S::YELLOW)
+    {
+      currentState = TrafficState::RED;
+      currentStateBegin = timer_counter;
+    }
+  }else if (currentState == TrafficState::RED)
+  {
+    if (timer_counter - currentStateBegin >= TIMERS_S::RED)
+    {
+      currentState = TrafficState::RED_YELLOW;
+      currentStateBegin = timer_counter;
+    }
+  }else if (currentState == TrafficState::RED_YELLOW)
+  {
+    if (timer_counter - currentStateBegin >= TIMERS_S::RED_YELLOW)
+    {
+      currentState = TrafficState::GREEN;
+      currentStateBegin = timer_counter;
+    }
+  }
+  
+  
+  
 }
 
 void handleTrafficLight(TrafficState state){
@@ -113,25 +175,9 @@ void setup() {
 }
 
 void loop() {
-  if (isButtonPressed)
-  {
-    uint32_t currentMillis = millis();
-    if (currentMillis-lastButtonPressTime > 50)
-    {
-      lastButtonPressTime = currentMillis;
-      if (currentState == TrafficState::YELLOW_BLINKING)
-      {
-        currentState = stateBeforeInterrupt;
-        
-      }else{
-        stateBeforeInterrupt = currentState;
-        currentState = TrafficState::YELLOW_BLINKING;
-      }
-    }
-    
-    isButtonPressed = false;    
-  }
+  stateHandler();
   handleTrafficLight(currentState);
+  Serial.println(timer_counter);
 
 }
 
