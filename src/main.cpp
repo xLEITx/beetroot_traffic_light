@@ -8,6 +8,10 @@ constexpr uint8_t BUTTON_PIN = 2;
 hw_timer_t * timer = NULL;
 volatile uint32_t timer_counter = 0;
 
+TrafficState currentState = TrafficState::GREEN;
+TrafficState stateBeforeInterrupt = TrafficState::GREEN;
+bool isButttonPressed = false;
+
 enum class TrafficState: uint8_t {
   GREEN,
   GREEN_BLINKING,
@@ -17,7 +21,7 @@ enum class TrafficState: uint8_t {
   YELLOW_BLINKING
 };
 
-const struct TIMERS_MS
+struct TIMERS_S
 {
   uint8_t GREEN = 10;
   uint8_t GREEN_BLINKING = 3;
@@ -27,6 +31,9 @@ const struct TIMERS_MS
   uint8_t GENERAL_BLINKING = 1;
 };
 
+void IRAM_ATTR onButton(){
+ isButttonPressed = true;
+}
 
 void IRAM_ATTR onTimer(){
   timer_counter++;
@@ -46,6 +53,7 @@ void setup() {
   timerAlarmWrite(timer, 1000000, true);
   timerAlarmEnable(timer);
 
+  attachInterrupt(BUTTON_PIN, onButton, FALLING);
 
 }
 
