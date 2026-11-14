@@ -8,6 +8,26 @@ constexpr uint8_t BUTTON_PIN = 2;
 hw_timer_t * timer = NULL;
 volatile uint32_t timer_counter = 0;
 
+enum class TrafficState: uint8_t {
+  GREEN,
+  GREEN_BLINKING,
+  YELLOW,
+  RED,
+  RED_YELLOW,
+  YELLOW_BLINKING
+};
+
+const struct TIMERS_MS
+{
+  uint8_t GREEN = 10;
+  uint8_t GREEN_BLINKING = 3;
+  uint8_t YELLOW = 3;
+  uint8_t RED = 10;
+  uint8_t RED_YELLOW = 2;
+  uint8_t GENERAL_BLINKING = 1;
+};
+
+
 void IRAM_ATTR onTimer(){
   timer_counter++;
 }
